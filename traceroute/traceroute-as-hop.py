@@ -1,5 +1,21 @@
-# This script goes through all the valid probes from probes/c_prb_id_traceroute
-# and determines how many AS-level hops for each line of files traceroute_probe/c-INSTANCE-PROBE
+##
+#	Sunday Feb 17, 2016
+#
+#	BGP Hackathon, CAIDA, San Diego-CA, USA
+#
+#	This script has been written by the Anycast #1 team of the BGP hackathon.
+#
+#	Input:
+#		Text files containing the traceroute AS hops (ASN) separated by a blank space. These files are created by processing JSON files from RIPE Atlas measurements.
+#
+#	BEFORE running:
+#		Before running this script, you have to parse the traceroute JSON files from RIPE Atlas. To do so:
+#			$ python peel-traceroute.py
+#		Note that the JSON input file for peel-traceroute.py is hardcoded and have to be changed by hand at this point.
+#
+#	Output:
+#		A JSON file containing D3 format data for a plot mapping the AS-level from multiple sources to
+#		a single destination.
 #
 
 import base64
@@ -8,6 +24,12 @@ from json import JSONEncoder
 from pprint import pprint
 import os
 import sys
+
+if len(sys.argv) < 2:
+	print "please inform the PEERING ASN to be the root of the plot"
+	quit()
+else:
+	peering_asn = str(sys.argv[1])
 
 nodeidcounter = 0
 
@@ -30,8 +52,6 @@ class Node:
 	
 	def __repr__(self):
 		return str(self.name) + ' -> ' + str(self.children)
-#inst = [ 'bts','fra','iad','jfk','lax','mad','ord','par' ]
-#inst = [ 'bts' ]
 
 # Load the list of probe - ASN relation
 prb_as = {}
@@ -41,7 +61,6 @@ with open("prb_as") as f:
 		idx = int(line_pieces[0])
 		prb_as[idx] = line_pieces[1].strip()
 f.close()
-#print "loaded %d probe to AS" % len(prb_as)
 
 # Load the list of probe IDs
 idx_prb_id = -1;
@@ -51,7 +70,6 @@ with open("prb_id_list") as f:
 		idx_prb_id += 1
 		prb_id[idx_prb_id] = int(prb_id_line)
 f.close()
-#print "loaded %d probe IDs" % len(prb_id)
 
 # Load the block_to_as file
 block = {}
@@ -66,8 +84,6 @@ with open("block_to_as_summary") as f:
 		else:
 			block[block_prefix] = int(block_pieces[1])
 f.close()
-#print "loaded %d blocks" % count, "into %d positions" % len(block)
-
 
 # Loop through probes
 count = 0
@@ -100,10 +116,11 @@ for idx_prb_id in range(len(prb_id)):
 								return_line += ' ' + str(block[hop_prefix])
 								prev_as = block[hop_prefix]
 			if len(hop_list) > 1:
-#				print return_line + " [ " + str(len(hop_list)) + " ]"
 				hop_list_list.append(hop_list)
+			hop_list.append(str(peering_asn))
+			hop_list.append(" ")
 			break
-#print json.dumps(hop_list_list)
+
 stuff = {}
 
 rootlist = []
@@ -132,80 +149,5 @@ class MyEncoder(JSONEncoder):
 	def default(self, o):
 		return o.__dict__
 
-
-print MyEncoder().encode(rootlist)
-
-quit()
-
-
-	# Open the file traceroute_probe/c-INST-PROBE
-#	with open(traceroute_file) as f:
-#		hop_list = []
-#		for line in f:
-#
-#			hop_count = 0
-#			prev_prefix = ""
-#			skip = 1
-#			ip_list = line.split(' ')
-#			for hop in ip_list:
-#				if skip == 0:
-#					if (hop != '*') and ('.' in hop):
-#						hop_octets = hop.split('.')
-#						hop_prefix = hop_octets[0] + '.' + hop_octets[1] + '.' + hop_octets[2] + '.0'
-#						if hop_prefix in block:
-#							if prev_prefix == "":
-#								prev_prefix = block[hop_prefix]
-#								#print hop_prefix, block[hop_prefix]
-#							elif prev_prefix != block[hop_prefix]:
-#								#print hop_prefix, block[hop_prefix]
-#								prev_prefix = block[hop_prefix]
-#								hop_count += 1
-#				else:
-#					skip = 0 # skips the first column because it is the probe ID
-#
-#			hop_list.append(hop_count)
-#
-#		output_file = traceroute_file + "-hops"
-#		f = open(output_file, 'w')
-#		for item_hop_list in hop_list:
-#			print >> f, item_hop_list
-#		#print hop_list, len(hop_list), output_file
-#
-#
-#	progress_probe += 1
-#	print progress_probe, tot_probe
-#
-#quit()
-
-
-
-
-
-
-
-if len(sys.argv) != 2:
-  print 'ERROR: Argument missing for calculating ping metrics.'
-  print 'Arguments: [instance ID]'
-  quit()
-
-inst_id = sys.argv[1]
-inst_file = '../files/traceroute/' + inst_id + '1a.c.root-servers.org_batch1'
-output_file = 'traceroute/c-' + inst_id + '-prb-TEMP'
-
-f = open(output_file, 'a+')
-
-with open(inst_file) as json_data:
-  data = json.load(json_data)
-  json_data.close()
-
-index = -1
-for res in data:
-	index += 1
-	if 'result' in data[index]:
-		print >> f, str(data[index]['prb_id'])
-
-f.close()
-
-#	if index == 5:
-#		quit()
+print "var astree=" + MyEncoder().encode(rootlist)[1:-1] + ";"
 

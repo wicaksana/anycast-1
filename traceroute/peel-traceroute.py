@@ -1,5 +1,16 @@
-# This script creates files in probes/ which contain all ping information per probe-instance pair.
-# Output files are named as c-instance-probe, where instance is the identifier of the C-root instance and probe is the prb_id.
+##
+#	Sunday Feb 17, 2016
+#
+#	BGP Hackathon, CAIDA, San Diego-CA, USA
+#
+#	This script has been written by the Anycast #1 team of the BGP hackathon.
+#
+#	Input:
+#		A JSON file from RIPE Atlas containing results of a traceroute measurement.
+#
+#	Output:
+#		Individual files per probe in the traceroute measurement. These files contain in each line all the hops in a traceroute run.
+#
 
 import base64
 import json
@@ -7,13 +18,11 @@ from pprint import pprint
 import os
 import sys
 
-inst_file = 'RIPE-Atlas-measurement-2048556.json'
 inst_file = '20160101.json'
 
 with open(inst_file) as json_data:
   data = json.load(json_data)
   json_data.close()
-
 
 index = -1
 for res in data:
