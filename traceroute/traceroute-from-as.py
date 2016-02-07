@@ -86,6 +86,7 @@ with open(traceroute_file) as f:
 	line_count = 0
 	for line in f:
 		hop_list = []
+		hop_list.append(" ")
 		ip_list = line.split(' ')
 		for idx,hop in enumerate(ip_list):
 			if idx == 0:
@@ -138,7 +139,7 @@ class MyEncoder(JSONEncoder):
 		return o.__dict__
 
 
-print MyEncoder().encode(rootlist)
+print "var astree=" + MyEncoder().encode(rootlist)[1:-1] + ";"
 
 quit()
 
