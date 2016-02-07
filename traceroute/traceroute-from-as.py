@@ -85,13 +85,13 @@ hop_list = []
 with open(traceroute_file) as f:
 	line_count = 0
 	for line in f:
+		hop_list = []
 		ip_list = line.split(' ')
 		for idx,hop in enumerate(ip_list):
 			if idx == 0:
-				pass
 #					hop_list.append(int(prb_as[int(hop)]))
 #					return_line = prb_as[int(hop)]
-#					hop_list.append(hop.strip())
+				hop_list.append(hop.strip())
 			else:
 				hop_list.append(hop.strip())
 #					if (hop != '*') and ('.' in hop):
@@ -106,8 +106,8 @@ with open(traceroute_file) as f:
 #				print return_line + " [ " + str(len(hop_list)) + " ]"
 			hop_list_list.append(hop_list)
 		line_count += 1
-		if (line_count == 10):
-			break
+#		if (line_count == 10):
+#			break
 #print json.dumps(hop_list_list)
 stuff = {}
 
