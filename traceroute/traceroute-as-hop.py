@@ -4,18 +4,32 @@
 
 import base64
 import json
+from json import JSONEncoder
 from pprint import pprint
 import os
 import sys
 
+nodeidcounter = 0
 
 class Node:
 	def __init__(self):
-		self.nodeid = 0
-		self.lst = []
-		self.desc = ""
+		self.children = []
 		self.name = ""
-
+		global nodeidcounter
+		self.nodeid = nodeidcounter
+		nodeidcounter += 1
+	def add_child(self, child):
+		node = None
+		matching_nodes = [x for x in self.children if x.name == child.name]
+		if len(matching_nodes) > 0:
+			node = matching_nodes[0]
+		if node is None:
+			self.children.append(child)
+			node = child
+		return node
+	
+	def __repr__(self):
+		return str(self.name) + ' -> ' + str(self.children)
 #inst = [ 'bts','fra','iad','jfk','lax','mad','ord','par' ]
 #inst = [ 'bts' ]
 
@@ -74,11 +88,6 @@ for idx_prb_id in range(len(prb_id)):
 			ip_list = line.split(' ')
 			for idx,hop in enumerate(ip_list):
 				if idx == 0:
-					newnode = Node()
-					id_count+=1
-					newnode.nodeid = id_count
-					newnode.name = str(prb_as[int(hop)])
-					newnode.desc = "AS" + str(prb_as[int(hop)])
 					hop_list.append(int(prb_as[int(hop)]))
 					return_line = prb_as[int(hop)]
 				else:
@@ -87,44 +96,44 @@ for idx_prb_id in range(len(prb_id)):
 						hop_prefix = hop_octets[0] + '.' + hop_octets[1] + '.' + hop_octets[2] + '.0'
 						if (hop_prefix in block):
 							if (block[hop_prefix] not in hop_list and block[hop_prefix] != 0):
-								id_count+=1
-								newnode.nodeid = id_count
-								newnode.name = str(prb_as[int(hop)])
-								newnode.desc = "AS" + str(prb_as[int(hop)])
 								hop_list.append(block[hop_prefix])
 								return_line += ' ' + str(block[hop_prefix])
 								prev_as = block[hop_prefix]
-			if len(hop_list) > 2:
+			if len(hop_list) > 1:
 #				print return_line + " [ " + str(len(hop_list)) + " ]"
 				hop_list_list.append(hop_list)
 			break
-
 #print json.dumps(hop_list_list)
-print str(hop_list_list[0])
 stuff = {}
 
+rootlist = []
+for aslist in hop_list_list:
+	aslist.reverse()
+	level = 0
+	cur_node = None
+	for asn in aslist:
+		if level == 0:
+			node = None
+			matching_nodes = [x for x in rootlist if x.name == str(asn)]
+			if len(matching_nodes) > 0:
+				node = matching_nodes[0]
+			if node is None:
+				node = Node()
+				node.name = str(asn)
+				rootlist.append(node)
+			cur_node = node
+		else:
+			node = Node()
+			node.name = str(asn)
+			cur_node = cur_node.add_child(node)
+		level += 1
 
-node_id = -1
-for hl in hop_list_list:
-	cur = stuff
-	hl.reverse()
-	for hop in hl:
-		if hop not in cur:
-			cur[hop] = {}
-			cur = cur[hop]
-	break
-print stuff
+class MyEncoder(JSONEncoder):
+	def default(self, o):
+		return o.__dict__
 
 
-def gimmestuff(dicty):
-	for key,value in dicty:
-		stuff_aux = {}
-		stuff_aux['node_id'] = 1
-		stuff_aux['name'] = str(key)
-		stuff_aux['desc'] = "abcd123"
-		stuff_aux['children'] = [gimmestuff(x) for x in value]
-	
-
+print MyEncoder().encode(rootlist)
 
 quit()
 
