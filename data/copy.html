@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+.astree_ok_1772723 {
+      position: absolute;
+      left: 50px;
+      top: 10px;
+}
+
+.node {
+  font: 10px sans-serif;
+}
+
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
+
+</style>
+<body>
+<div>
+
+
+<h2>Control plane (upper row)</h2>
+<h2>Data plane (bottom row)</h2>
+
+<div style="clear: both">
+    <h1 style="float:left">Before</h1>
+    <h1 style="float:right">After</h1>
+</div>
+<group id='astree_ok_1772722'></group>
+<script type='text/javascript' src='http://sg-pub.ripe.net/demo-area/v6reachability4lirs/jquery-1.7.2.min.js'></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+
+<group id='astree_ok_1772723'></group>
+<script type='text/javascript' src='http://sg-pub.ripe.net/demo-area/v6reachability4lirs/jquery-1.7.2.min.js'></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<group id='astree_ok_1772724'></group>
+<script type='text/javascript' src='http://sg-pub.ripe.net/demo-area/v6reachability4lirs/jquery-1.7.2.min.js'></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<group id='astree_ok_1772725'></group>
+<script type='text/javascript' src='http://sg-pub.ripe.net/demo-area/v6reachability4lirs/jquery-1.7.2.min.js'></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+</div>
+
+<script type='text/javascript'>
+// adapted from http://www.webreference.com/programming/javascript/mk/column2/index.html
+// needed to capture mouse-position. Probably best to not set 'onmousemove' but to append ot onmousemove
+document.onmousemove = mouseMove;
+function mouseMove(ev){
+   ev           = ev || window.event;
+   document._mousePos = mouseCoords(ev);
+}
+function mouseCoords(ev){
+   if(ev.pageX || ev.pageY){
+      return {x:ev.pageX, y:ev.pageY};
+   }
+   return {
+      x:ev.clientX + document.body.scrollLeft - document.body.clientLeft,
+      y:ev.clientY + document.body.scrollTop  - document.body.clientTop
+   };
+}
+
+
+function create_astree( treedata, elt, astree_type ) { // astree_type  'fail' is special
+   var r = 960 / 2;
+
+   var tree = d3.layout.tree()
+    .size([360, r - 120])
+    .separation(function(a, b) { return (a.parent == b.parent ? 10 : 20) / a.depth; });
+
+   var diagonal = d3.svg.diagonal.radial()
+    .projection(function(d) { return [d.y, d.x / 180 * Math.PI]; });
+
+   // var vis = d3.select("#astree_ok").append("svg")
+   var vis = d3.select( elt ).append("svg")
+    .attr("width", r * 2)
+    .attr("height", r * 2 - 150)
+  .append("g")
+    .attr("transform", "translate(" + r + "," + r + ")");
+
+  var nodes = tree.nodes( treedata );
+
+  var link = vis.selectAll("path.link")
+      .data(tree.links(nodes))
+    .enter().append("path")
+      .attr("class", "link")
+      .attr("d", diagonal);
+   link.classed("rootlink_" + astree_type , function(p) { return p.source.depth == 0 }); // make them hideable
+
+  var node = vis.selectAll("g.node")
+      .data(nodes)
+    .enter().append("g")
+      // .attr("class", function(d) { return d.parent ? "node" : "node rootnode"})
+      .attr("class", function(d) { 
+         if ( d.depth == 0 ) { return "node centernode" }
+         if ( astree_type != 'fail' && d.depth == 1 ) {
+            return "node rootnode"
+         }
+         return "node"
+      })
+      .on("mouseover", nodeMouseover)
+      .on("mouseleave", evt_node_mouseleave)
+      .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+
+  node.append("circle")
+      .attr("r", 3);
+
+  node.append("text")
+      .attr("dx", function(d) { return d.x < 180 ? 8 : -8; })
+      .attr("dy", ".31em")
+      .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+      .attr("transform", function(d) { return d.x < 180 ? null : "rotate(180)"; })
+      .text(function(d) { return d.name; });
+
+    //@@TODO easier way for next 3:
+    if ( astree_type == 'fail' ) {
+       vis.selectAll(".node circle").classed("tr_results_ok", function(p) { return (p.tr_results == 'ok' && (p.depth > 0) ) });
+       vis.selectAll(".node circle").classed("tr_results_fail", function(p) { return (p.tr_results == 'fail' && (p.depth > 0)) });
+       vis.selectAll(".node circle").classed("tr_results_mix", function(p) { return (p.tr_results == 'mix' && (p.depth > 0)) });
+    } else {
+       vis.selectAll(".node circle").classed("tr_results_ok", function(p) { return (p.tr_results == 'ok' && (p.depth > 1) ) });
+       vis.selectAll(".node circle").classed("tr_results_fail", function(p) { return (p.tr_results == 'fail' && (p.depth > 1)) });
+       vis.selectAll(".node circle").classed("tr_results_mix", function(p) { return (p.tr_results == 'mix' && (p.depth > 1)) });
+    }
+
+   // Highlight the node and connected links on mouseover.
+   function nodeMouseover(d,x) {
+       $('.tooltip').remove();
+       if ( d.depth < 1 ) { // don't work on root-node
+         return;
+       }
+       $('<div class="tooltip">'+  tooltip_content(d) +'</div>').appendTo('body');
+       $('.tooltip').css({'left': document._mousePos.x +'px', 'top': document._mousePos.y +'px'}).hover(
+         function() {},
+         function() { $('.tooltip').hide() }
+       );
+       d3.selectAll(".link").classed("active", function(p) { return p.source === d || p.target === d; });
+       var asname = d.name;
+       // @@TODO select all interesting
+       // see http://bost.ocks.org/mike/hive/
+       /*
+       d3.select(this).append("text")
+         .attr("x", function(d) { return d.x < 180 ? 8 : -8; })
+         .attr("y", ".31em")
+         .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+         .attr("transform", function(d) { return d.x < 180 ? null : "rotate(180)"; })
+         .attr("class","hovertext")
+         .text(function(d) {
+            return d.name;
+         });
+         */
+       d3.select(this).selectAll(".node circle").classed("active", true); // function(p) { return p.name == d.name });
+       d3.selectAll(".node circle").classed("active", function(p) { return p.name == d.name });
+       // info.text(d.node.name);
+   }
+
+   function tooltip_content(d) {
+      var html = '';
+      html += "<a href='http://stat.ripe.net/AS" + d.name +"'><span class='linktext'>" + d.name + "</span></a>";
+      if ( d.desc !== undefined && d.desc != '') {
+         html += "<br>" + d.desc;
+      } 
+      if ( d.nodeid !== undefined && cgi_url !== undefined && msm_id !== undefined && nonce !== undefined ) {
+         html += "<br><div id='tooltip_tracedetail'<a onclick='trace_callback("+ d.nodeid +")'><span class='linktext'>Show traces taking this path</span></a></div>"; 
+      }
+      return html;
+   }
+
+   function evt_node_mouseleave() {
+      m = d3.mouse(this);
+   }
+}
+
+function trace_callback( nodeid ) {
+   var cb_url;
+   if ( nodeid !== undefined && cgi_url !== undefined && msm_id !== undefined && nonce !== undefined ) {
+      cb_url = cgi_url + '?mode=traces;callback=tracehtml;msm_id=' + msm_id + ';nonce='+ nonce +';node_id=' + nodeid;
+      // http://albatross.ripe.net/cgi-bin/demo-area/v6reach.cgi?msm_id=1002520&nonce=alwaysworks111&mode=traces&node_id=7&callback=varname&no_embed=1
+   } else {
+      return;
+   }
+   $.ajax({
+      url: cb_url,
+      async: false,
+      jsonpCallback: 'tracehtml',
+      //jsonp: true,
+      //contentType: 'application/json',
+      dataType: 'jsonp',
+      /*
+      complete: function(xhr, d, e) {
+         if (xhr.responseText) {
+            console.log( xhr.responseText );
+         }
+      },
+      */
+      error: function() {
+         
+      },
+      success: function(json) {
+         if ( json.tracehtml ) {
+            $('#tooltip_tracedetail').html('<pre class="tracedetail">' + json.tracehtml + "</pre>");
+            $('#tooltip_tracedetail').focusout(function() {
+            });
+
+            
+         }
+      }
+   });
+}
+</script>
+<style type='text/css'>
+.node circle {
+  fill: #fff;
+  opacity: 1;
+  stroke: grey;
+  stroke-width: 1.5px;
+}
+
+
+.node circle.active {
+  stroke: black;
+  stroke-width: 2px;
+  stroke: black;
+}
+
+.node circle.tr_results_ok {
+   fill: green;
+}
+
+.node circle.tr_results_fail {
+   fill: red;
+}
+
+.node circle.tr_results_mix {
+   fill: orange;
+}
+
+.centernode circle {
+   fill: black;
+   stroke: black;
+   opacity: 0;
+}
+
+.rootnode circle {
+  fill: black;
+  stroke: black;
+  opacity: 1;
+  stroke-width: 1.5px;
+}
+
+.node {
+  font: 8px sans-serif;
+}
+
+.rootnode {
+   font: 14px sans-serif;
+   fill: black;
+}
+
+.link {
+  fill: none;
+  stroke: #ddd;
+  stroke-width: 1px;
+}
+
+.link.active {
+  stroke: black;
+  stroke-width: 2px;
+  stroke-opacity: 1;
+}
+
+.rootlink_undefined {
+   opacity: 0;
+}
+
+.rootlink_fail {
+   stroke-dasharray: 5,5;
+}
+
+.hovertext {
+   stroke: purple;
+   font: 20px sans-serif;
+   overflow-y: scroll;
+   max-height:50%;
+}
+
+.tooltip {
+   position: absolute;
+   background: white;
+   border: 1px black solid
+}
+
+.linktext {
+   color:red;
+   text-decoration:underline;
+}
+
+pre.tracedetail {
+   font-size: 60%;
+}
+
+.experimental {
+   background-image: url(http://albatross.ripe.net/demo-area/v6reachability4lirs/experimental-bg.png); 
+}
+   
+   
+}
+</style>
+<script src="output-control-noamster.json"></script>
+<script type='text/javascript'>
+$(document).ready(function() {
+create_astree( astreecontrolnoamster, '#astree_ok_1772722' );
+});</script>
+
+<script src="output-control-amster.json"></script>
+<script type='text/javascript'>
+$(document).ready(function() {
+create_astree( astreecontrolamster, '#astree_ok_1772723' );
+});</script>
+
+<script src="output-data-noamster.json"></script>
+<script type='text/javascript'>
+$(document).ready(function() {
+create_astree( astreedatanoamster, '#astree_ok_1772724' );
+});</script>
+
+<script src="output-data-amster.json"></script>
+<script type='text/javascript'>
+$(document).ready(function() {
+create_astree( astreedataamster, '#astree_ok_1772725' );
+});</script>
+
+
+</body>
+
+<!--
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script>
+
+var diameter = 960;
+
+var tree = d3.layout.tree()
+    .size([360, diameter / 2 - 120])
+    .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
+
+var diagonal = d3.svg.diagonal.radial()
+    .projection(function(d) { return [d.y, d.x / 180 * Math.PI]; });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", diameter)
+    .attr("height", diameter - 150)
+  .append("g")
+    .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
+
+d3.json("flare.json", function(error, root) {
+  if (error) throw error;
+
+  var nodes = tree.nodes(root),
+      links = tree.links(nodes);
+
+  var link = svg.selectAll(".link")
+      .data(links)
+    .enter().append("path")
+      .attr("class", "link")
+      .attr("d", diagonal);
+
+  var node = svg.selectAll(".node")
+      .data(nodes)
+    .enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+
+  node.append("circle")
+      .attr("r", 4.5);
+
+  node.append("text")
+      .attr("dy", ".31em")
+      .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+      .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
+      .text(function(d) { return d.name; });
+});
+
+d3.select(self.frameElement).style("height", diameter - 150 + "px");
+
+</script>
+-->
+
