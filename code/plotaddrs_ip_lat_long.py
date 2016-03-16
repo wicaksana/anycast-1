@@ -7,7 +7,7 @@ import colorsys
 import tempfile
 import argparse
 
-import pygmaps
+from .pygmaps import maps
 
 def parse_cmd_args():
 
@@ -31,7 +31,7 @@ def load_addresses_locations(file_name):
             try:
                 ips_geolocations[loc[0]] = (float(loc[1]),float(loc[2]),loc[3])
             except:
-                print loc
+                print(loc)
     return ips_geolocations
 
 
@@ -39,7 +39,7 @@ def main():
 
     args = parse_cmd_args()
 
-    my_map = pygmaps.maps(0, 0, 2)
+    my_map = maps(0, 0, 2)
     colors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#00ffff", "#ff00ff",
               "#000000", "#ffffff", "#770000", "#007700", "#000077", "#777700",
               "#007777", "#770077"]
